@@ -1,0 +1,94 @@
+Create a Flutter app with following specifications:
+
+1. **MP3 Player Core**
+- Use `just_audio` package for audio playback
+- Implement audio controller with:
+  - Play/pause functionality
+  - Seek bar with duration tracking
+  - Volume control
+  - Background playback support
+- Add playlist management with `flutter_playlist` package
+- UI Requirements:
+  - Waveform visualization using `audio_waveforms`
+  - Album art display with placeholder
+  - Lyrics synchronization panel
+
+2. **Lyrics Management System**
+- Create `LyricsProvider` class with multiple sources:
+  - ChartLyrics API
+  - Lyrics.ovh API
+  - Musixmatch (web scraping fallback)
+- Implement download functionality:
+  - Save as .lrc files with `path_provider`
+  - Auto-match with local music library
+  - Offline storage management
+- Add lyrics editor for user corrections
+
+3. **MP3 Cutter & Ringtone Creator**
+- Use `flutter_ffmpeg` for audio processing
+- Implement cutting features:
+  - Waveform-based selection interface
+  - Precise trim handles (millisecond accuracy)
+  - Fade-in/out effects
+  - Format conversion (MP3, OGG, M4R)
+- Add ringtone-specific features:
+  - Android ringtone manager integration
+  - iOS sound settings shortcut
+  - Preset duration templates (30s, 45s)
+
+4. **File Management System**
+- Develop smart file renamer with:
+  - Metadata-based suggestions (using `taglib`)
+  - Batch processing capability
+  - Regex support
+  - Undo/redo functionality
+- Implement secure file operations:
+  - Checksum verification
+  - Cloud backup integration (Firebase)
+  - Duplicate file detection
+
+// ARCHITECTURE REQUIREMENTS
+- BLoC pattern for state management
+- Hive for local data storage
+- Firebase Analytics for usage tracking
+- Modular navigation using auto_route
+
+// ADDITIONAL DEPENDENCIES
+dependencies:
+  just_audio: ^0.9.34
+  audio_service: ^0.18.9
+  flutter_ffmpeg: ^0.4.2
+  file_picker: ^5.3.3
+  path_provider: ^2.1.1
+  http: ^0.13.5
+  permission_handler: ^10.4.0
+
+// SPECIAL CONFIGURATIONS
+Android:
+- Add WRITE_EXTERNAL_STORAGE permission
+- Enable multidex support
+- Configure foreground service for audio
+
+iOS:
+- Add NSAppleMusicUsageDescription
+- Enable background audio mode
+- Configure UIBackgroundModes in Info.plist
+
+// UI/UX SPECIFICS
+- Modern gradient-based design
+- Adaptive dark/light theme
+- Haptic feedback integration
+- Custom animations for transitions
+- Context-aware help system
+
+// ERROR HANDLING
+- Implement network failure recovery
+- Add audio format fallback converter
+- Create crash analytics dashboard
+- User-friendly error toasts
+
+// TESTING REQUIREMENTS
+- Unit tests for audio processing
+- Golden tests for UI components
+- Integration tests for file operations
+- Performance profiling setup
