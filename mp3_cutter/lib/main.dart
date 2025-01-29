@@ -1,6 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'app/app.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize background playback
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.example.mp3_player_pro.channel.audio',
+    androidNotificationChannelName: 'Audio playback',
+    androidNotificationOngoing: true,
+    androidShowNotificationBadge: true,
+  );
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
   runApp(const MyApp());
 }
 
