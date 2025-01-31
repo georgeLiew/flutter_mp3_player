@@ -199,7 +199,7 @@ class _FolderListPageState extends State<FolderListPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 16.0), // Add margin to the left and right
+          padding: EdgeInsets.symmetric(horizontal: 8.0), // Add margin to the left and right
           height: 60.0, // Set a fixed height for the bottom bar
           child: BottomAppBar(
             child: Row(
@@ -231,19 +231,16 @@ class _FolderListPageState extends State<FolderListPage> {
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 3, // 30% width for the player controls
+                // Player controls section
+                SizedBox(
+                  width: 145, // Fixed width for the player controls
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.start, // Align buttons to the start
                     children: [
                       IconButton(
-                        icon: Icon(Icons.skip_previous),
-                        onPressed: () {
-                          // Implement previous song functionality
-                        },
-                      ),
-                      IconButton(
                         icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow), // Change icon based on playing status
+                        padding: EdgeInsets.zero, // Remove padding entirely
+                        constraints: BoxConstraints(), // Remove additional constraints
                         onPressed: () {
                           if (_isPlaying) {
                             _audioPlayer.pause(); // Pause the audio
@@ -257,12 +254,15 @@ class _FolderListPageState extends State<FolderListPage> {
                       ),
                       IconButton(
                         icon: Icon(Icons.skip_next),
+                        padding: EdgeInsets.zero, // Remove padding entirely
+                        constraints: BoxConstraints(), // Remove additional constraints
                         onPressed: () {
                           // Implement next song functionality
                         },
                       ),
                       IconButton(
                         icon: Icon(Icons.list),
+                        padding: EdgeInsets.zero, // Remove padding entirely
                         onPressed: () {
                           // Show current playlist
                         },
