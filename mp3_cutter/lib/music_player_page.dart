@@ -3,24 +3,34 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:async'; // Add this import for StreamController
 
 class MusicPlayerPage extends StatefulWidget {
   const MusicPlayerPage({super.key});
 
   @override
-  _MusicPlayerPageState createState() => _MusicPlayerPageState();
+  MusicPlayerPageState createState() => MusicPlayerPageState();
 }
 
-class _MusicPlayerPageState extends State<MusicPlayerPage> {
+class MusicPlayerPageState extends State<MusicPlayerPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   double _volume = 0.5; // Default volume
   bool _isPlaying = false;
   String? _currentSongTitle;
+  late StreamSubscription<Duration> _positionSubscription; // For tracking position
+  late RecorderController _recorderController; // Add this line
 
   @override
   void initState() {
     super.initState();
     _requestPermissions();
+    _audioPlayer.setVolume(_volume); // Set initial volume
+    _recorderController = RecorderController(); // Initialize the recorder controller
+    _positionSubscription = _audioPlayer.positionStream.listen((position) {
+      setState(() {
+        // Update the UI with the current position
+      });
+    });
     // Listen to player state changes
     _audioPlayer.playerStateStream.listen((state) {
       if (mounted) {
@@ -34,6 +44,8 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _recorderController.dispose(); // Dispose of the recorder controller
+    _positionSubscription.cancel(); // Cancel the subscription
     super.dispose();
   }
 
@@ -52,16 +64,20 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
       if (result != null) {
         // Load and play the selected audio file
         await _audioPlayer.setFilePath(result.files.single.path!);
-        setState(() {
-          _currentSongTitle = result.files.single.name;
-          _isPlaying = true;
-        });
+        if (mounted) {
+          setState(() {
+            _currentSongTitle = result.files.single.name;
+            _isPlaying = true;
+          });
+        }
         _audioPlayer.play();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading audio file: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading audio file: $e')),
+        );
+      }
     }
   }
 
@@ -83,7 +99,8 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
 
   // Function to seek audio
   void _seekAudio(double value) {
-    // Implement seek functionality
+    final newPosition = Duration(milliseconds: (value * _audioPlayer.duration!.inMilliseconds).toInt());
+    _audioPlayer.seek(newPosition);
   }
 
   // Function to change volume
@@ -142,12 +159,32 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
             iconSize: 64,
           ),
           SizedBox(height: 20),
+          // Time display with padding
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0), // Add horizontal padding
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDuration(_audioPlayer.position),
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  _audioPlayer.duration != null
+                      ? _formatDuration(_audioPlayer.duration!)
+                      : '0:00', // Default to '0:00' if duration is null
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
           // Seek Bar
           Slider(
-            value: 0.0, // Update with current position
+            value: (_audioPlayer.position.inMilliseconds.toDouble() /
+                (_audioPlayer.duration?.inMilliseconds.toDouble() ?? 1)), // Prevent division by zero
             onChanged: _seekAudio,
             min: 0.0,
-            max: 1.0, // Update with audio duration
+            max: 1.0,
           ),
           SizedBox(height: 20),
           // Volume Control
@@ -161,7 +198,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
           // Waveform Visualization
           AudioWaveforms(
             size: Size(MediaQuery.of(context).size.width, 100),
-            recorderController: RecorderController(),
+            recorderController: _recorderController, // Pass the recorder controller
             waveStyle: WaveStyle(
               showMiddleLine: false,
               extendWaveform: true,
@@ -170,5 +207,13 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
         ],
       ),
     );
+  }
+
+  // Function to format duration to mm:ss
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 } 
