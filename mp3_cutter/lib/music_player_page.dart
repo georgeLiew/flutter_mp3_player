@@ -187,14 +187,6 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
             max: 1.0,
           ),
           SizedBox(height: 20),
-          // Volume Control
-          Slider(
-            value: _volume,
-            onChanged: _changeVolume,
-            min: 0.0,
-            max: 1.0,
-          ),
-          SizedBox(height: 20),
           // Waveform Visualization
           AudioWaveforms(
             size: Size(MediaQuery.of(context).size.width, 100),
