@@ -37,20 +37,28 @@ class _FolderListPageState extends State<FolderListPage> {
   // Function to fetch audio folders from specific directories
   Future<void> _fetchAudioFolders() async {
     // Access the Music and Download directories
-    final musicDirectory = Directory('/storage/emulated/0/Music');
-    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+    // List of common directories where audio files might be stored
+    final directories = [
+      Directory('/storage/emulated/0/Music'),
+      Directory('/storage/emulated/0/Download'),
+      Directory('/storage/emulated/0/Ringtones'),
+      Directory('/storage/emulated/0/Notifications'),
+      Directory('/storage/emulated/0/Podcasts'),
+      Directory('/storage/emulated/0/Audiobooks'),
+      Directory('/storage/emulated/0/Recordings'),
+      Directory('/storage/emulated/0'),
+      Directory('/storage/sdcard1'), // For external SD card
+      Directory('/storage/emulated/0/Android/media'),
+      Directory('/storage/emulated/0/SamsungFlow') // Added Samsung Flow directory
+    ];
 
-    // Check if the directories exist and fetch audio files
-    if (await musicDirectory.exists()) {
-      _fetchFoldersFromDirectory(musicDirectory);
-    } else {
-      print('Music directory does not exist.'); // Debug statement
-    }
-
-    if (await downloadsDirectory.exists()) {
-      _fetchFoldersFromDirectory(downloadsDirectory);
-    } else {
-      print('Downloads directory does not exist.'); // Debug statement
+    // Check each directory and fetch audio files if it exists
+    for (var directory in directories) {
+      if (await directory.exists()) {
+        _fetchFoldersFromDirectory(directory);
+      } else {
+        print('${directory.path} does not exist.'); // Debug statement
+      }
     }
 
     setState(() {}); // Update UI
@@ -158,29 +166,29 @@ class _FolderListPageState extends State<FolderListPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView( // Wrap the Column in a SingleChildScrollView
-        child: Column(
-          children: [
-            // Menu Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                TextButton(
-                  onPressed: () => _onItemTapped(0),
-                  child: Text('All Songs'),
-                ),
-                TextButton(
-                  onPressed: () => _onItemTapped(1),
-                  child: Text('Folders'),
-                ),
-                TextButton(
-                  onPressed: () => _onItemTapped(2),
-                  child: Text('Favorites'),
-                ),
-              ],
-            ),
-            // Content based on selected menu item
-            _selectedIndex == 0
+      body: Column(
+        children: [
+          // Menu Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              TextButton(
+                onPressed: () => _onItemTapped(0),
+                child: Text('All Songs'),
+              ),
+              TextButton(
+                onPressed: () => _onItemTapped(1),
+                child: Text('Folders'),
+              ),
+              TextButton(
+                onPressed: () => _onItemTapped(2),
+                child: Text('Favorites'),
+              ),
+            ],
+          ),
+          // Content based on selected menu item
+          Expanded( // Use Expanded to give ListView a bounded height
+            child: _selectedIndex == 0
                 ? ListView.builder(
                     itemCount: _audioFolders.length,
                     itemBuilder: (context, index) {
@@ -194,8 +202,8 @@ class _FolderListPageState extends State<FolderListPage> {
                     },
                   )
                 : Center(child: Text('Content for ${_selectedIndex == 1 ? "Folders" : "Favorites"}')),
-          ],
-        ),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
