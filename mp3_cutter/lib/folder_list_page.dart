@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart'; // Import for PlatformException
 
 class FolderListPage extends StatefulWidget {
   @override
@@ -13,13 +15,40 @@ class _FolderListPageState extends State<FolderListPage> {
   @override
   void initState() {
     super.initState();
+    _requestPermissions(); // Request permissions on init
     _fetchAudioFolders(); // Fetch audio folders on init
   }
 
-  // Function to fetch audio folders
+  // Request storage permissions
+  Future<void> _requestPermissions() async {
+    await Permission.storage.request();
+  }
+
+  // Function to fetch audio folders from specific directories
   Future<void> _fetchAudioFolders() async {
-    final directory = await getExternalStorageDirectory(); // Get external storage directory
-    if (directory != null) {
+    // Access the Music and Download directories
+    final musicDirectory = Directory('/storage/emulated/0/Music');
+    final downloadsDirectory = Directory('/storage/emulated/0/Download');
+
+    // Check if the directories exist and fetch audio files
+    if (await musicDirectory.exists()) {
+      _fetchFoldersFromDirectory(musicDirectory);
+    } else {
+      print('Music directory does not exist.'); // Debug statement
+    }
+
+    if (await downloadsDirectory.exists()) {
+      _fetchFoldersFromDirectory(downloadsDirectory);
+    } else {
+      print('Downloads directory does not exist.'); // Debug statement
+    }
+
+    setState(() {}); // Update UI
+  }
+
+  // Helper function to fetch folders from a given directory
+  void _fetchFoldersFromDirectory(Directory directory) {
+    try {
       final List<FileSystemEntity> entities = directory.listSync(recursive: true);
       for (var entity in entities) {
         if (entity is Directory) {
@@ -28,12 +57,15 @@ class _FolderListPageState extends State<FolderListPage> {
             if (file is File && file.path.endsWith('.mp3')) { // Check for audio files
               if (!_audioFolders.contains(entity.path)) {
                 _audioFolders.add(entity.path);
+                print('Found audio folder: ${entity.path}'); // Debug statement
               }
             }
           }
         }
       }
-      setState(() {}); // Update UI
+      print('Total audio folders found: ${_audioFolders.length}'); // Debug statement
+    } catch (e) {
+      print('Error accessing directory: ${directory.path} - $e'); // Handle the error
     }
   }
 
