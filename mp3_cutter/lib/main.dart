@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'music_player_page.dart'; // Import the music player page
+import 'folder_list_page.dart'; // Import the FolderListPage
 
 void main() {
   runApp(MyApp());
@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MusicPlayerPage(), // Set the home to MusicPlayerPage
+      home: FolderListPage(), // Set FolderListPage as the home page
     );
   }
 }

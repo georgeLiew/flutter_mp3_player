@@ -3,6 +3,9 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart'; // Import for PlatformException
+import 'package:marquee/marquee.dart'; // Import the marquee package
+import 'music_player_page.dart'; // Import the MusicPlayerPage
+import 'package:just_audio/just_audio.dart'; // Import just_audio for audio playback
 
 class FolderListPage extends StatefulWidget {
   @override
@@ -11,6 +14,10 @@ class FolderListPage extends StatefulWidget {
 
 class _FolderListPageState extends State<FolderListPage> {
   List<String> _audioFolders = []; // To store audio folders
+  int _selectedIndex = 0; // To track the selected menu item
+  String _currentSongName = "No song playing"; // Placeholder for current song name
+  final AudioPlayer _audioPlayer = AudioPlayer(); // Create an instance of AudioPlayer
+  bool _isPlaying = false; // Track whether the audio is playing
 
   @override
   void initState() {
@@ -78,6 +85,7 @@ class _FolderListPageState extends State<FolderListPage> {
         .map((file) => file.path)
         .toList();
 
+    // Show a dialog with the list of songs
     showDialog(
       context: context,
       builder: (context) {
@@ -91,7 +99,11 @@ class _FolderListPageState extends State<FolderListPage> {
                 return ListTile(
                   title: Text(songs[index].split('/').last),
                   onTap: () {
-                    // Add song to playlist or play it
+                    // Set the current song name and play it in the bottom player
+                    setState(() {
+                      _currentSongName = songs[index].split('/').last; // Update current song name
+                      _playSong(songs[index]); // Play the song
+                    });
                     Navigator.of(context).pop(); // Close dialog
                   },
                 );
@@ -103,23 +115,162 @@ class _FolderListPageState extends State<FolderListPage> {
     );
   }
 
+  // Function to play the selected song in the bottom player
+  void _playSong(String path) async {
+    try {
+      await _audioPlayer.setFilePath(path); // Set the file path for the audio player
+      _audioPlayer.play(); // Play the audio
+      setState(() {
+        _isPlaying = true; // Update the playing status
+      });
+    } catch (e) {
+      print('Error playing song: $e'); // Handle any errors
+    }
+  }
+
+  // Function to handle menu item selection
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Audio Folders'),
-      ),
-      body: ListView.builder(
-        itemCount: _audioFolders.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(_audioFolders[index].split('/').last),
-            onTap: () {
-              // Show songs in the selected folder
-              _showSongsInFolder(_audioFolders[index]);
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              // Implement search functionality
             },
-          );
-        },
+          ),
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              // Implement settings functionality
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView( // Wrap the Column in a SingleChildScrollView
+        child: Column(
+          children: [
+            // Menu Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                TextButton(
+                  onPressed: () => _onItemTapped(0),
+                  child: Text('All Songs'),
+                ),
+                TextButton(
+                  onPressed: () => _onItemTapped(1),
+                  child: Text('Folders'),
+                ),
+                TextButton(
+                  onPressed: () => _onItemTapped(2),
+                  child: Text('Favorites'),
+                ),
+              ],
+            ),
+            // Content based on selected menu item
+            _selectedIndex == 0
+                ? ListView.builder(
+                    itemCount: _audioFolders.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(_audioFolders[index].split('/').last),
+                        onTap: () {
+                          // Show songs in the selected folder
+                          _showSongsInFolder(_audioFolders[index]);
+                        },
+                      );
+                    },
+                  )
+                : Center(child: Text('Content for ${_selectedIndex == 1 ? "Folders" : "Favorites"}')),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 16.0), // Add margin to the left and right
+          height: 60.0, // Set a fixed height for the bottom bar
+          child: BottomAppBar(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 7, // 70% width for the song name
+                  child: GestureDetector(
+                    onTap: () {
+                      // Navigate to MusicPlayerPage when the song name is tapped
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MusicPlayerPage(songPath: _currentSongName), // Pass the current song path
+                        ),
+                      );
+                    },
+                    child: Marquee(
+                      text: _currentSongName,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), // Adjust font size
+                      scrollAxis: Axis.horizontal,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      blankSpace: 20.0,
+                      velocity: 100.0,
+                      pauseAfterRound: Duration(seconds: 1),
+                      accelerationDuration: Duration(seconds: 1),
+                      accelerationCurve: Curves.linear,
+                      decelerationDuration: Duration(milliseconds: 500),
+                      decelerationCurve: Curves.easeOut,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3, // 30% width for the player controls
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.skip_previous),
+                        onPressed: () {
+                          // Implement previous song functionality
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow), // Change icon based on playing status
+                        onPressed: () {
+                          if (_isPlaying) {
+                            _audioPlayer.pause(); // Pause the audio
+                          } else {
+                            _audioPlayer.play(); // Play the audio
+                          }
+                          setState(() {
+                            _isPlaying = !_isPlaying; // Toggle playing status
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.skip_next),
+                        onPressed: () {
+                          // Implement next song functionality
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.list),
+                        onPressed: () {
+                          // Show current playlist
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

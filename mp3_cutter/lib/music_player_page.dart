@@ -9,13 +9,15 @@ import 'dart:io'; // Add this import for File
 import 'folder_list_page.dart'; // Import the new folder list page
 
 class MusicPlayerPage extends StatefulWidget {
-  const MusicPlayerPage({super.key});
+  final String songPath; // Add a field to accept the song path
+
+  const MusicPlayerPage({Key? key, required this.songPath}) : super(key: key); // Constructor
 
   @override
-  MusicPlayerPageState createState() => MusicPlayerPageState();
+  _MusicPlayerPageState createState() => _MusicPlayerPageState();
 }
 
-class MusicPlayerPageState extends State<MusicPlayerPage> {
+class _MusicPlayerPageState extends State<MusicPlayerPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   double _volume = 0.5; // Default volume
   bool _isPlaying = false;
@@ -45,6 +47,7 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
       }
     });
     _fetchAudioFolders(); // Fetch audio folders on init
+    _playSong(widget.songPath); // Play the song passed from FolderListPage
   }
 
   @override
@@ -148,6 +151,12 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
         SnackBar(content: Text('Added to playlist: ${songPath.split('/').last}')),
       );
     }
+  }
+
+  // Function to play the selected song
+  Future<void> _playSong(String path) async {
+    await _audioPlayer.setFilePath(path);
+    _audioPlayer.play();
   }
 
   @override
