@@ -4,6 +4,9 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async'; // Add this import for StreamController
+import 'package:path_provider/path_provider.dart'; // Add this import
+import 'dart:io'; // Add this import for File
+import 'folder_list_page.dart'; // Import the new folder list page
 
 class MusicPlayerPage extends StatefulWidget {
   const MusicPlayerPage({super.key});
@@ -19,6 +22,8 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
   String? _currentSongTitle;
   late StreamSubscription<Duration> _positionSubscription; // For tracking position
   late RecorderController _recorderController; // Add this line
+  List<String> _playlist = []; // To store the playlist
+  List<String> _audioFolders = []; // To store audio folders
 
   @override
   void initState() {
@@ -39,6 +44,7 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
         });
       }
     });
+    _fetchAudioFolders(); // Fetch audio folders on init
   }
 
   @override
@@ -111,6 +117,39 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
     });
   }
 
+  // Function to fetch audio folders
+  Future<void> _fetchAudioFolders() async {
+    final directory = await getExternalStorageDirectory(); // Get external storage directory
+    if (directory != null) {
+      final List<FileSystemEntity> entities = directory.listSync(recursive: true);
+      for (var entity in entities) {
+        if (entity is Directory) {
+          final files = entity.listSync();
+          for (var file in files) {
+            if (file is File && file.path.endsWith('.mp3')) { // Check for audio files
+              if (!_audioFolders.contains(entity.path)) {
+                _audioFolders.add(entity.path);
+              }
+            }
+          }
+        }
+      }
+      setState(() {}); // Update UI
+    }
+  }
+
+  // Function to add song to playlist
+  void _addToPlaylist(String songPath) {
+    if (!_playlist.contains(songPath)) {
+      setState(() {
+        _playlist.add(songPath);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added to playlist: ${songPath.split('/').last}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,6 +159,15 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
           IconButton(
             icon: Icon(Icons.file_open),
             onPressed: _pickAndPlayAudio,
+          ),
+          IconButton(
+            icon: Icon(Icons.folder),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FolderListPage()), // Navigate to FolderListPage
+              );
+            },
           ),
         ],
       ),
@@ -196,6 +244,21 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
               extendWaveform: true,
             ),
           ),
+          // Display audio folders
+          Expanded(
+            child: ListView.builder(
+              itemCount: _audioFolders.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(_audioFolders[index].split('/').last),
+                  onTap: () {
+                    // Show songs in the selected folder
+                    _showSongsInFolder(_audioFolders[index]);
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -207,5 +270,39 @@ class MusicPlayerPageState extends State<MusicPlayerPage> {
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  // Function to show songs in a selected folder
+  void _showSongsInFolder(String folderPath) {
+    final directory = Directory(folderPath);
+    final List<FileSystemEntity> files = directory.listSync();
+    List<String> songs = files
+        .where((file) => file is File && file.path.endsWith('.mp3'))
+        .map((file) => file.path)
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Songs in ${folderPath.split('/').last}'),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              itemCount: songs.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(songs[index].split('/').last),
+                  onTap: () {
+                    _addToPlaylist(songs[index]); // Add song to playlist
+                    Navigator.of(context).pop(); // Close dialog
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 } 
