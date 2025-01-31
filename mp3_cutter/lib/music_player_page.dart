@@ -3,6 +3,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 
 class MusicPlayerPage extends StatefulWidget {
+  const MusicPlayerPage({super.key});
+
   @override
   _MusicPlayerPageState createState() => _MusicPlayerPageState();
 }
@@ -83,10 +85,12 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
           SizedBox(height: 20),
           // Waveform Visualization
           AudioWaveforms(
-            // Add your waveform data here
-            data: [], // Placeholder for waveform data
-            height: 100,
-            width: double.infinity,
+            size: Size(MediaQuery.of(context).size.width, 100),
+            recorderController: RecorderController(),
+            waveStyle: WaveStyle(
+              showMiddleLine: false,
+              extendWaveform: true,
+            ),
           ),
         ],
       ),
