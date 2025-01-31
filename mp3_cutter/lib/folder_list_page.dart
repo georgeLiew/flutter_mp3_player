@@ -28,7 +28,10 @@ class _FolderListPageState extends State<FolderListPage> {
 
   // Request storage permissions
   Future<void> _requestPermissions() async {
-    await Permission.storage.request();
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
+    }
   }
 
   // Function to fetch audio folders from specific directories
