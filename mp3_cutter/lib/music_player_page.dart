@@ -7,6 +7,7 @@ import 'dart:async'; // Add this import for StreamController
 import 'package:path_provider/path_provider.dart'; // Add this import
 import 'dart:io'; // Add this import for File
 import 'folder_list_page.dart'; // Import the new folder list page
+import 'package:flutter_logs/flutter_logs.dart'; // Import flutter_logs
 
 class MusicPlayerPage extends StatefulWidget {
   final String songPath; // Add a field to accept the song path
@@ -86,6 +87,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading audio file: $e')),
         );
+        await FlutterLogs.logError("MusicPlayerPage", "pickAndPlayAudio", "Error loading audio file: $e"); // Log error
       }
     }
   }
@@ -132,6 +134,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
             if (file is File && file.path.endsWith('.mp3')) { // Check for audio files
               if (!_audioFolders.contains(entity.path)) {
                 _audioFolders.add(entity.path);
+                await FlutterLogs.logInfo("MusicPlayerPage", "fetchAudioFolders", "Added audio folder: ${entity.path}"); // Log added audio folder
               }
             }
           }
@@ -156,6 +159,7 @@ class _MusicPlayerPageState extends State<MusicPlayerPage> {
   // Function to play the selected song
   Future<void> _playSong(String path) async {
     await _audioPlayer.setFilePath(path);
+    await FlutterLogs.logInfo("MusicPlayerPage", "playSong", "Playing song: $path"); // Log playing song
     _audioPlayer.play();
   }
 

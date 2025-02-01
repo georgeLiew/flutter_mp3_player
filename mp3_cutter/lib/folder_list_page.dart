@@ -6,6 +6,8 @@ import 'package:flutter/services.dart'; // Import for PlatformException
 import 'package:marquee/marquee.dart'; // Import the marquee package
 import 'music_player_page.dart'; // Import the MusicPlayerPage
 import 'package:just_audio/just_audio.dart'; // Import just_audio for audio playback
+import 'package:flutter_media_store/flutter_media_store_platform_interface.dart'; // Import flutter_media_store_platform_interface
+import 'package:flutter_logs/flutter_logs.dart'; // Import flutter_logs
 
 class FolderListPage extends StatefulWidget {
   @override
@@ -23,7 +25,6 @@ class _FolderListPageState extends State<FolderListPage> {
   void initState() {
     super.initState();
     _requestPermissions(); // Request permissions on init
-    _fetchAudioFolders(); // Fetch audio folders on init
   }
 
   // Request storage permissions
@@ -34,96 +35,44 @@ class _FolderListPageState extends State<FolderListPage> {
     }
   }
 
-  // Function to fetch audio folders from specific directories
+  // Function to fetch audio folders using MediaStore API
   Future<void> _fetchAudioFolders() async {
-    // Access the Music and Download directories
-    // List of common directories where audio files might be stored
-    final directories = [
-      Directory('/storage/emulated/0/Music'),
-      Directory('/storage/emulated/0/Download'),
-      Directory('/storage/emulated/0/Ringtones'),
-      Directory('/storage/emulated/0/Notifications'),
-      Directory('/storage/emulated/0/Podcasts'),
-      Directory('/storage/emulated/0/Audiobooks'),
-      Directory('/storage/emulated/0/Recordings'),
-      Directory('/storage/emulated/0'),
-      Directory('/storage/sdcard1'), // For external SD card
-      Directory('/storage/emulated/0/Android/media'),
-      Directory('/storage/emulated/0/SamsungFlow') // Added Samsung Flow directory
-    ];
-
-    // Check each directory and fetch audio files if it exists
-    for (var directory in directories) {
-      if (await directory.exists()) {
-        _fetchFoldersFromDirectory(directory);
-      } else {
-        print('${directory.path} does not exist.'); // Debug statement
-      }
+    // Check for storage permission
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
     }
 
-    setState(() {}); // Update UI
-  }
-
-  // Helper function to fetch folders from a given directory
-  void _fetchFoldersFromDirectory(Directory directory) {
     try {
-      final List<FileSystemEntity> entities = directory.listSync(recursive: true);
-      for (var entity in entities) {
-        if (entity is Directory) {
-          final files = entity.listSync();
-          for (var file in files) {
-            if (file is File && file.path.endsWith('.mp3')) { // Check for audio files
-              if (!_audioFolders.contains(entity.path)) {
-                _audioFolders.add(entity.path);
-                print('Found audio folder: ${entity.path}'); // Debug statement
+      await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Attempting to pick audio files..."); // Log before picking files
+      // Use the pickFile method to allow users to select audio files
+      await FlutterMediaStorePlatformInterface.instance.pickFile(
+        multipleSelect: true, // Allow multiple file selection
+        onFilesPicked: (uris) async {
+          await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Files picked: $uris"); // Log picked URIs
+          for (var uri in uris) {
+            // Ensure the URI is a valid string and not already in the list
+            if (uri is String) {
+              if (!_audioFolders.contains(uri)) {
+                _audioFolders.add(uri); // Add the picked audio file to the list
+                await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Added audio file: $uri"); // Log added audio file
+              } else {
+                await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "File already in list: $uri"); // Use logInfo instead of logWarning
               }
+            } else {
+              await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Invalid URI type: $uri"); // Log invalid type
             }
           }
-        }
-      }
-      print('Total audio folders found: ${_audioFolders.length}'); // Debug statement
+          setState(() {}); // Update UI after adding files
+          await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Updated UI with new files"); // Log UI update
+        },
+        onError: (errorMessage) async {
+          await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Error picking files: $errorMessage");
+        },
+      );
     } catch (e) {
-      print('Error accessing directory: ${directory.path} - $e'); // Handle the error
+      await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Error fetching audio files: $e"); // Log any errors
     }
-  }
-
-  // Function to show songs in a selected folder
-  void _showSongsInFolder(String folderPath) {
-    final directory = Directory(folderPath);
-    final List<FileSystemEntity> files = directory.listSync();
-    List<String> songs = files
-        .where((file) => file is File && file.path.endsWith('.mp3'))
-        .map((file) => file.path)
-        .toList();
-
-    // Show a dialog with the list of songs
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Songs in ${folderPath.split('/').last}'),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(songs[index].split('/').last),
-                  onTap: () {
-                    // Set the current song name and play it in the bottom player
-                    setState(() {
-                      _currentSongName = songs[index].split('/').last; // Update current song name
-                      _playSong(songs[index]); // Play the song
-                    });
-                    Navigator.of(context).pop(); // Close dialog
-                  },
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
   }
 
   // Function to play the selected song in the bottom player
@@ -135,7 +84,7 @@ class _FolderListPageState extends State<FolderListPage> {
         _isPlaying = true; // Update the playing status
       });
     } catch (e) {
-      print('Error playing song: $e'); // Handle any errors
+      await FlutterLogs.logError("FolderListPage", "playSong", "Error playing song: $e"); // Log any errors
     }
   }
 
@@ -178,7 +127,7 @@ class _FolderListPageState extends State<FolderListPage> {
               ),
               TextButton(
                 onPressed: () => _onItemTapped(1),
-                child: Text('Folders'),
+                child: Text('Playlist'),
               ),
               TextButton(
                 onPressed: () => _onItemTapped(2),
@@ -187,7 +136,7 @@ class _FolderListPageState extends State<FolderListPage> {
             ],
           ),
           // Content based on selected menu item
-          Expanded( // Use Expanded to give ListView a bounded height
+          Expanded(
             child: _selectedIndex == 0
                 ? ListView.builder(
                     itemCount: _audioFolders.length,
@@ -195,15 +144,19 @@ class _FolderListPageState extends State<FolderListPage> {
                       return ListTile(
                         title: Text(_audioFolders[index].split('/').last),
                         onTap: () {
-                          // Show songs in the selected folder
-                          _showSongsInFolder(_audioFolders[index]);
+                          // You can implement functionality here if needed
                         },
                       );
                     },
                   )
-                : Center(child: Text('Content for ${_selectedIndex == 1 ? "Folders" : "Favorites"}')),
+                : Center(child: Text('Content for ${_selectedIndex == 1 ? "Playlist" : "Favorites"}')),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchAudioFolders, // Call _fetchAudioFolders when the plus button is pressed
+        child: Icon(Icons.add), // Plus icon
+        tooltip: 'Add Audio',
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
@@ -271,6 +224,7 @@ class _FolderListPageState extends State<FolderListPage> {
                       IconButton(
                         icon: Icon(Icons.list),
                         padding: EdgeInsets.zero, // Remove padding entirely
+                        constraints: BoxConstraints(), // Remove additional constraints
                         onPressed: () {
                           // Show current playlist
                         },
