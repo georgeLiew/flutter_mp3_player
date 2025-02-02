@@ -40,38 +40,29 @@ class _FolderListPageState extends State<FolderListPage> {
     // Check for storage permission
     var status = await Permission.storage.status;
     if (!status.isGranted) {
-      await Permission.storage.request();
+      status = await Permission.storage.request();
+      if (!status.isGranted) {
+        debugPrint("Storage permission denied");
+        return;
+      }
     }
 
     try {
-      await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Attempting to pick audio files..."); // Log before picking files
-      // Use the pickFile method to allow users to select audio files
-      await FlutterMediaStorePlatformInterface.instance.pickFile(
-        multipleSelect: true, // Allow multiple file selection
-        onFilesPicked: (uris) async {
-          await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Files picked: $uris"); // Log picked URIs
-          for (var uri in uris) {
-            // Ensure the URI is a valid string and not already in the list
-            if (uri is String) {
-              if (!_audioFolders.contains(uri)) {
-                _audioFolders.add(uri); // Add the picked audio file to the list
-                await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Added audio file: $uri"); // Log added audio file
-              } else {
-                await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "File already in list: $uri"); // Use logInfo instead of logWarning
-              }
-            } else {
-              await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Invalid URI type: $uri"); // Log invalid type
-            }
-          }
-          setState(() {}); // Update UI after adding files
-          await FlutterLogs.logInfo("FolderListPage", "fetchAudioFolders", "Updated UI with new files"); // Log UI update
+      debugPrint("Attempting to pick audio files...");
+      FlutterMediaStorePlatformInterface.instance.pickFile(
+        multipleSelect: true,
+        onFilesPicked: (uris) {
+          debugPrint("Files picked: $uris");
+          setState(() {
+            _audioFolders.addAll(uris.whereType<String>());
+          });
         },
-        onError: (errorMessage) async {
-          await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Error picking files: $errorMessage");
+        onError: (errorMessage) {
+          debugPrint("Error picking files: $errorMessage");
         },
       );
     } catch (e) {
-      await FlutterLogs.logError("FolderListPage", "fetchAudioFolders", "Error fetching audio files: $e"); // Log any errors
+      debugPrint("Error fetching audio files: $e");
     }
   }
 
